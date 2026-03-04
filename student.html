@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pracownia Multimedialna</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0a0e1a;color:#eee;min-height:100vh;display:flex;align-items:center;justify-content:center}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+
+/* ── SETUP ─────────────────────────────────────────── */
+#setup{background:#111827;border:1px solid #1e2d42;border-radius:16px;padding:36px;width:400px;max-width:95vw;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.5);position:relative;z-index:1}
+.setup-logo{font-size:48px;margin-bottom:14px}
+h1{font-size:18px;margin-bottom:6px;color:#00d4ff;font-family:monospace;letter-spacing:.05em}
+.setup-sub{font-size:13px;color:#64748b;margin-bottom:28px}
+.field{text-align:left;margin-bottom:14px}
+.field label{display:block;font-size:10px;font-family:monospace;text-transform:uppercase;letter-spacing:.1em;color:#64748b;margin-bottom:5px}
+.field input{width:100%;padding:11px 14px;background:#1a2235;border:1px solid #1e2d42;border-radius:8px;color:#eee;font-size:14px;outline:none;transition:border-color .2s}
+.field input:focus{border-color:#00d4ff}
+.code-input{font-family:monospace!important;font-size:20px!important;letter-spacing:.3em!important;text-transform:uppercase!important;text-align:center!important}
+.join-btn{width:100%;padding:13px;background:#00d4ff;color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;font-family:monospace;text-transform:uppercase;letter-spacing:.08em}
+.join-btn:hover{background:#00b8d9;box-shadow:0 0 20px rgba(0,212,255,.4)}
+.err{margin-top:10px;font-size:12px;color:#ff4d6d;min-height:16px}
+.adv-toggle{font-size:11px;color:#64748b;cursor:pointer;margin-bottom:14px;text-decoration:underline}
+.adv-section{display:none;margin-bottom:14px}
+.adv-section.open{display:block}
+
+/* ── MAIN ──────────────────────────────────────────── */
+#main{display:none;width:100vw;min-height:100vh;padding:16px;position:relative;z-index:1}
+.topbar{display:flex;align-items:center;justify-content:space-between;background:#111827;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:12px}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.dot{width:8px;height:8px;border-radius:50%;background:#00ff9d;animation:pulse 2s infinite;flex-shrink:0}
+.dot.red{background:#ff4d6d}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.work-area{background:#111827;border-radius:10px;padding:18px;min-height:260px}
+.work-title{font-size:11px;color:#00d4ff;text-transform:uppercase;letter-spacing:.1em;font-family:monospace;margin-bottom:14px}
+.info-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.info-card{flex:1;min-width:100px;background:#0f172a;border-radius:8px;padding:12px;text-align:center}
+.info-val{font-size:20px;font-weight:700;color:#00ff9d;font-family:monospace}
+.info-val.red{color:#ff4d6d}
+.info-label{font-size:10px;color:#64748b;margin-top:3px}
+#msg-list{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.msg-item{background:#0f172a;border-radius:6px;padding:9px 14px;border-left:3px solid #00d4ff;font-size:13px}
+.msg-time{font-size:10px;color:#64748b;font-family:monospace}
+
+/* ── LOCK OVERLAY ──────────────────────────────────── */
+#lock-overlay{position:fixed;inset:0;z-index:9999;background:#070b14;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center}
+#lock-overlay.active{display:flex}
+.lock-big{font-size:80px;animation:b 2s infinite}
+@keyframes b{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.lock-msg{font-size:22px;font-weight:700;color:#ff4d6d;font-family:monospace}
+.lock-sub{font-size:13px;color:#64748b}
+
+/* ── TOAST ─────────────────────────────────────────── */
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#111827;border:1px solid #00d4ff;border-radius:10px;padding:14px 22px;min-width:280px;max-width:90vw;text-align:center;box-shadow:0 8px 28px rgba(0,212,255,.25);display:none;z-index:10000}
+#toast.show{display:block;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;top:0}to{opacity:1;top:20px}}
+.toast-label{font-size:10px;color:#00d4ff;text-transform:uppercase;letter-spacing:.1em;font-family:monospace;margin-bottom:5px}
+.toast-text{font-size:15px;font-weight:600}
+
+/* ── SESSION ENDED ─────────────────────────────────── */
+#session-ended{position:fixed;inset:0;z-index:9998;background:#070b14;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center}
+#session-ended.active{display:flex}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup">
+  <div class="setup-logo">🖥️</div>
+  <h1>Pracownia Multimedialna</h1>
+  <div class="setup-sub">Wpisz dane i kod sesji podany przez nauczyciela</div>
+
+  <div class="field">
+    <label>Imię i nazwisko</label>
+    <input type="text" id="student-name" placeholder="np. Jan Kowalski" autocomplete="name">
+  </div>
+  <div class="field">
+    <label>Kod sesji (podany przez nauczyciela)</label>
+    <input type="text" id="session-code" placeholder="ABC-DEF" class="code-input" maxlength="7" oninput="this.value=this.value.toUpperCase()">
+  </div>
+
+  <div class="adv-toggle" onclick="toggleAdv()">▸ Ustawienia zaawansowane</div>
+  <div class="adv-section" id="adv-section">
+    <div class="field">
+      <label>Nazwa urządzenia</label>
+      <input type="text" id="device-name" placeholder="np. Tablet-01">
+    </div>
+    <div class="field">
+      <label>Adres serwera</label>
+      <input type="text" id="server-addr" placeholder="ws://..." value="ws://localhost:8765">
+    </div>
+  </div>
+
+  <button class="join-btn" onclick="joinSession()">Dołącz do lekcji →</button>
+  <div class="err" id="setup-err"></div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="dot" id="status-dot"></div>
+      <span id="status-text">Połączony z lekcją</span>
+    </div>
+    <span id="student-label" style="color:#64748b;font-size:11px;font-family:monospace"></span>
+    <span id="clock" style="color:#00d4ff;font-size:12px;font-family:monospace"></span>
+  </div>
+
+  <div class="work-area">
+    <div class="work-title">📚 Panel ucznia</div>
+    <div class="info-row">
+      <div class="info-card"><div class="info-val" id="info-time">00:00</div><div class="info-label">Czas na lekcji</div></div>
+      <div class="info-card"><div class="info-val" id="info-msgs">0</div><div class="info-label">Wiadomości</div></div>
+      <div class="info-card"><div class="info-val" id="info-status">🟢</div><div class="info-label">Status</div></div>
+    </div>
+    <div id="msg-list"></div>
+  </div>
+</div>
+
+<!-- LOCK -->
+<div id="lock-overlay">
+  <div class="lock-big">🔒</div>
+  <div class="lock-msg">Urządzenie zablokowane</div>
+  <div class="lock-sub" id="lock-reason">Nauczyciel zablokował to urządzenie</div>
+</div>
+
+<!-- SESSION ENDED -->
+<div id="session-ended">
+  <div style="font-size:64px">📚</div>
+  <div style="font-size:22px;font-weight:700;color:#00d4ff;font-family:monospace">Lekcja zakończona</div>
+  <div style="font-size:14px;color:#64748b" id="ended-reason">Nauczyciel zakończył sesję.</div>
+  <button onclick="location.reload()" style="margin-top:20px;padding:12px 28px;background:#00d4ff;color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:monospace">Dołącz ponownie</button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"><div class="toast-label">📢 Wiadomość od nauczyciela</div><div class="toast-text" id="toast-text"></div></div>
+
+<canvas id="offscreen-canvas" style="display:none"></canvas>
+
+<script>
+let ws=null, deviceId=null, startTime=Date.now(), msgCount=0, captureInterval=null;
+let studentName='', deviceName='';
+
+function toggleAdv() {
+  const s = document.getElementById('adv-section');
+  s.classList.toggle('open');
+  document.querySelector('.adv-toggle').textContent = s.classList.contains('open') ? '▾ Ustawienia zaawansowane' : '▸ Ustawienia zaawansowane';
+}
+
+function joinSession() {
+  studentName = document.getElementById('student-name').value.trim();
+  const code = document.getElementById('session-code').value.trim().toUpperCase();
+  deviceName = document.getElementById('device-name').value.trim() || 'Tablet-' + Math.floor(Math.random()*900+100);
+  const addr = document.getElementById('server-addr').value.trim() || 'ws://localhost:8765';
+
+  if (!studentName) return setErr('Wpisz imię i nazwisko.');
+  if (code.length < 6) return setErr('Wpisz poprawny kod sesji (np. ABC-DEF).');
+
+  setErr('Łączenie...');
+  ws = new WebSocket(addr);
+  ws.onopen = () => { ws.send(JSON.stringify({ type:'student_hello', name:deviceName, student:studentName, sessionCode:code })); };
+  ws.onerror = () => setErr('Nie można połączyć z serwerem. Sprawdź adres i kod.');
+  ws.onclose = () => { document.getElementById('status-dot').className='dot red'; document.getElementById('status-text').textContent='Rozłączono'; clearInterval(captureInterval); };
+  ws.onmessage = onMessage;
+}
+
+function onMessage(evt) {
+  let msg; try { msg = JSON.parse(evt.data); } catch { return; }
+
+  if (msg.type === 'auth_error') { setErr(msg.reason); if (ws) { ws.close(); ws=null; } return; }
+
+  if (msg.type === 'student_ok') {
+    deviceId = msg.id;
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    document.getElementById('student-label').textContent = studentName + ' · ' + deviceName;
+    captureInterval = setInterval(captureAndSend, 2000);
+    return;
+  }
+  if (msg.type === 'lock') { setLocked(msg.locked, msg.reason); return; }
+  if (msg.type === 'message') { showToast(msg.text); addMsg(msg.text); return; }
+  if (msg.type === 'get_screen') { captureAndSend(); return; }
+  if (msg.type === 'session_ended') {
+    clearInterval(captureInterval);
+    document.getElementById('main').style.display = 'none';
+    document.getElementById('lock-overlay').classList.remove('active');
+    document.getElementById('ended-reason').textContent = msg.reason || 'Nauczyciel zakończył sesję.';
+    document.getElementById('session-ended').classList.add('active');
+    return;
+  }
+}
+
+function setErr(msg) { document.getElementById('setup-err').textContent = msg; }
+
+function setLocked(locked, reason) {
+  document.getElementById('lock-overlay').classList.toggle('active', locked);
+  if (reason) document.getElementById('lock-reason').textContent = reason;
+  document.getElementById('info-status').textContent = locked ? '🔴' : '🟢';
+  document.getElementById('info-status').className = 'info-val' + (locked?' red':'');
+}
+
+function showToast(text) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = text;
+  t.classList.add('show'); clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 6000);
+}
+
+function addMsg(text) {
+  msgCount++; document.getElementById('info-msgs').textContent = msgCount;
+  const list = document.getElementById('msg-list');
+  const div = document.createElement('div'); div.className = 'msg-item';
+  div.innerHTML = `<div class="msg-time">${new Date().toLocaleTimeString('pl-PL')}</div>${text}`;
+  list.prepend(div);
+  if (list.children.length > 30) list.lastChild.remove();
+}
+
+async function captureAndSend() {
+  if (!ws || ws.readyState !== 1 || !deviceId) return;
+  const canvas = document.getElementById('offscreen-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 640; canvas.height = 400;
+
+  // Gradient background
+  const grd = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  grd.addColorStop(0, '#0a0e1a'); grd.addColorStop(1, '#0f172a');
+  ctx.fillStyle = grd; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,212,255,0.04)'; ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 32) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for (let y = 0; y < canvas.height; y += 32) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+
+  // Topbar
+  ctx.fillStyle = '#111827'; ctx.fillRect(10, 10, canvas.width-20, 38);
+  ctx.fillStyle = '#00ff9d'; ctx.beginPath(); ctx.arc(24, 29, 5, 0, Math.PI*2); ctx.fill();
+  ctx.font = '12px monospace'; ctx.fillStyle = '#e2e8f0';
+  ctx.fillText(`${studentName}  ·  ${deviceName}`, 36, 33);
+  ctx.fillStyle = '#00d4ff'; ctx.textAlign = 'right';
+  ctx.fillText(new Date().toLocaleTimeString('pl-PL'), canvas.width-18, 33);
+  ctx.textAlign = 'left';
+
+  // Info cards
+  const cards = [['Czas', getElapsed()], ['Wiadomości', String(msgCount)], ['Status', 'Aktywny']];
+  cards.forEach(([label, val], i) => {
+    const x = 12 + i * 206, y = 58;
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(x, y, 196, 64);
+    ctx.fillStyle = '#00ff9d'; ctx.font = 'bold 18px monospace'; ctx.fillText(val, x+12, y+34);
+    ctx.fillStyle = '#64748b'; ctx.font = '10px monospace'; ctx.fillText(label.toUpperCase(), x+12, y+54);
+  });
+
+  // Messages
+  ctx.font = '12px sans-serif';
+  let yy = 136;
+  const items = document.querySelectorAll('.msg-item');
+  items.forEach((m, i) => {
+    if (i > 6 || yy > canvas.height-20) return;
+    ctx.fillStyle = '#1a2235'; ctx.fillRect(12, yy, canvas.width-24, 28);
+    ctx.strokeStyle = '#00d4ff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(12,yy); ctx.lineTo(12,yy+28); ctx.stroke();
+    ctx.fillStyle = '#94a3b8'; ctx.fillText(m.textContent.trim().substring(0,80), 22, yy+18);
+    yy += 32;
+  });
+
+  // Placeholder text if no messages
+  if (items.length === 0) {
+    ctx.fillStyle = '#1e2d42'; ctx.fillRect(12, 136, canvas.width-24, 60);
+    ctx.fillStyle = '#334155'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Brak wiadomości od nauczyciela', canvas.width/2, 170);
+    ctx.textAlign = 'left';
+  }
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+  ws.send(JSON.stringify({ type:'screen_data', id:deviceId, data:dataUrl }));
+}
+
+function getElapsed() {
+  const s = Math.floor((Date.now()-startTime)/1000);
+  return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+}
+
+// Clock + elapsed
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('pl-PL');
+  document.getElementById('info-time').textContent = getElapsed();
+}, 1000);
+
+// Pre-fill server from URL params
+const params = new URLSearchParams(location.search);
+if (params.get('server')) document.getElementById('server-addr').value = params.get('server');
+if (params.get('code')) { document.getElementById('session-code').value = params.get('code').toUpperCase(); }
+</script>
+</body>
+</html>

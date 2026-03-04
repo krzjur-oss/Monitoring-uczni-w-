@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor Klasy — Panel Nauczyciela</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap');
+:root {
+  --bg:#0a0e1a; --surface:#111827; --surface2:#1a2235; --border:#1e2d42;
+  --accent:#00d4ff; --accent2:#ff4d6d; --green:#00ff9d; --yellow:#ffcc00;
+  --text:#e2e8f0; --muted:#64748b;
+  --mono:'Space Mono',monospace; --sans:'DM Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+/* ── LOGIN ────────────────────────────────────────── */
+#login-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:380px;max-width:95vw;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.6)}
+.login-logo{font-size:52px;margin-bottom:16px}
+.login-title{font-family:var(--mono);font-size:14px;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:32px}
+.field{text-align:left;margin-bottom:16px}
+.field label{display:block;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px}
+.field input{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;font-family:var(--sans);outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--accent)}
+.btn{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:10px 20px;border:1px solid;border-radius:4px;cursor:pointer;transition:all .2s;background:transparent}
+.btn-primary{border-color:var(--accent);color:var(--accent)}
+.btn-primary:hover{background:var(--accent);color:var(--bg);box-shadow:0 0 20px rgba(0,212,255,.4)}
+.btn-danger{border-color:var(--accent2);color:var(--accent2)}
+.btn-danger:hover{background:var(--accent2);color:#fff;box-shadow:0 0 20px rgba(255,77,109,.4)}
+.btn-success{border-color:var(--green);color:var(--green)}
+.btn-success:hover{background:var(--green);color:var(--bg);box-shadow:0 0 20px rgba(0,255,157,.4)}
+.btn-warn{border-color:var(--yellow);color:var(--yellow)}
+.btn-warn:hover{background:var(--yellow);color:var(--bg)}
+.btn-full{width:100%;padding:12px}
+.error-msg{margin-top:12px;font-size:12px;color:var(--accent2);min-height:18px}
+.server-field{display:flex;gap:8px;margin-bottom:24px}
+.server-field input{flex:1}
+
+/* ── HEADER ───────────────────────────────────────── */
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:rgba(17,24,39,.95);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);flex-wrap:wrap;gap:10px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--accent);text-transform:uppercase}
+.logo-dot{width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 10px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.header-stats{display:flex;gap:20px;font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.stat-val{color:var(--accent);font-size:15px;display:block;margin-bottom:2px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.conn-badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid}
+.conn-badge.connected{border-color:var(--green);color:var(--green)}
+.conn-badge.disconnected{border-color:var(--accent2);color:var(--accent2)}
+
+/* ── SESSION BAR ──────────────────────────────────── */
+#session-bar{position:relative;z-index:10;display:flex;align-items:center;gap:16px;padding:10px 28px;background:rgba(17,24,39,.7);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.session-chip{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-family:var(--mono);font-size:12px}
+.session-code{color:var(--green);font-size:14px;letter-spacing:.15em;font-weight:700}
+.session-code.inactive{color:var(--muted);text-decoration:line-through}
+.copy-btn{background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted);transition:color .2s}
+.copy-btn:hover{color:var(--accent)}
+.no-session{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+/* ── TOOLBAR ──────────────────────────────────────── */
+.toolbar{position:relative;z-index:10;display:flex;align-items:center;gap:12px;padding:10px 28px;background:rgba(17,24,39,.5);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.toolbar-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:4px;font-family:var(--mono);font-size:11px;outline:none}
+select:focus{border-color:var(--accent)}
+
+/* ── MAIN ─────────────────────────────────────────── */
+.main{position:relative;z-index:1;padding:20px 28px}
+.msg-panel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:18px;display:none}
+.msg-panel.open{display:block}
+.msg-panel-title{font-family:var(--mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+.msg-row{display:flex;gap:10px}
+.msg-input{flex:1;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:14px;font-family:var(--sans);outline:none}
+.msg-input:focus{border-color:var(--accent)}
+.quick-msgs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.quick-btn{font-family:var(--mono);font-size:9px;text-transform:uppercase;padding:4px 10px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.06em}
+.quick-btn:hover{border-color:var(--yellow);color:var(--yellow)}
+.select-info{font-family:var(--mono);font-size:10px;color:var(--yellow);text-transform:uppercase;letter-spacing:.08em;padding:4px 10px;border:1px solid rgba(255,204,0,.3);border-radius:4px;display:none}
+.select-info.visible{display:block}
+
+/* ── DEVICE GRID ──────────────────────────────────── */
+#device-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.device-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:all .25s;cursor:pointer;position:relative}
+.device-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,212,255,.1)}
+.device-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,212,255,.25)}
+.device-card.locked{border-color:var(--accent2)}
+.device-card.locked .screen-preview{filter:brightness(.25)}
+.screen-preview{width:100%;aspect-ratio:16/10;background:#070b14;position:relative;overflow:hidden;transition:filter .3s}
+.screen-canvas{width:100%;height:100%;display:block}
+.lock-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,77,109,.06)}
+.device-card.locked .lock-overlay{display:flex}
+.lock-icon{font-size:28px}
+.card-info{padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)}
+.device-name{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);letter-spacing:.05em}
+.device-student{font-size:10px;color:var(--muted);margin-top:2px}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.status-online{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+.status-offline{background:var(--muted)}
+.status-locked{background:var(--accent2);box-shadow:0 0 8px var(--accent2);animation:pulse 2s infinite}
+.card-actions{display:flex;gap:4px;padding:0 10px 10px}
+.card-btn{flex:1;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.05em;padding:5px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.card-btn.view:hover{border-color:var(--accent);color:var(--accent)}
+.card-btn.lock:hover{border-color:var(--accent2);color:var(--accent2)}
+.card-btn.msg:hover{border-color:var(--yellow);color:var(--yellow)}
+.empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;font-family:var(--mono);color:var(--muted);font-size:12px;line-height:2}
+.empty-icon{font-size:44px;margin-bottom:14px;display:block}
+
+/* ── MODAL ────────────────────────────────────────── */
+.modal-bg{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:900px;max-width:95vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.6);animation:modalIn .25s}
+@keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.modal-title{font-family:var(--mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em}
+.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+.modal-close:hover{color:var(--text)}
+.modal-screen{flex:1;background:#050810;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:300px}
+.modal-canvas{max-width:100%;max-height:100%}
+.modal-footer{padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* ── LOG ──────────────────────────────────────────── */
+.log-panel{position:fixed;right:0;top:0;bottom:0;width:270px;background:rgba(10,14,26,.97);border-left:1px solid var(--border);backdrop-filter:blur(12px);z-index:50;transform:translateX(100%);transition:transform .3s;display:flex;flex-direction:column}
+.log-panel.open{transform:translateX(0)}
+.log-header{padding:14px 16px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;justify-content:space-between}
+.log-close-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px}
+.log-entries{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:5px}
+.log-entry{font-family:var(--mono);font-size:10px;padding:5px 8px;border-radius:3px;background:var(--surface2);border-left:2px solid var(--border)}
+.log-entry.info{border-left-color:var(--accent)}
+.log-entry.warn{border-left-color:var(--yellow)}
+.log-entry.action{border-left-color:var(--green)}
+.log-entry.danger{border-left-color:var(--accent2)}
+.log-time{color:var(--muted);font-size:9px}
+
+/* ── QR/SHARE SESSION MODAL ───────────────────────── */
+#share-modal{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center}
+#share-modal.open{display:flex}
+.share-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:36px;width:380px;max-width:95vw;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.6);animation:modalIn .25s}
+.share-code-display{font-family:var(--mono);font-size:36px;letter-spacing:.2em;color:var(--green);margin:20px 0;padding:16px;background:var(--surface2);border-radius:8px;border:1px solid rgba(0,255,157,.2)}
+.share-url{font-family:var(--mono);font-size:10px;color:var(--muted);word-break:break-all;margin-bottom:20px;padding:8px 12px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🖥️</div>
+    <div class="login-title">Monitor Klasy</div>
+    <div class="login-sub">Panel nauczyciela — wymagane uwierzytelnienie</div>
+    <div class="server-field">
+      <input type="text" id="server-url" placeholder="wss://..." value="ws://localhost:8765">
+    </div>
+    <div class="field">
+      <label>Hasło nauczyciela</label>
+      <input type="password" id="login-password" placeholder="Wprowadź hasło" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Zaloguj się →</button>
+    <div class="error-msg" id="login-error"></div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo"><div class="logo-dot"></div>Monitor Klasy</div>
+  <div class="header-stats">
+    <div><span class="stat-val" id="stat-online">0</span>Online</div>
+    <div><span class="stat-val" id="stat-locked">0</span>Zablokowane</div>
+    <div><span class="stat-val" id="stat-total">0</span>Łącznie</div>
+  </div>
+  <div class="header-right">
+    <span class="conn-badge disconnected" id="conn-badge">⬤ Rozłączony</span>
+    <button class="btn btn-danger" onclick="lockAll()">🔒 Zablokuj wszystkie</button>
+    <button class="btn btn-success" onclick="unlockAll()">🔓 Odblokuj wszystkie</button>
+    <button class="btn btn-primary" onclick="toggleLog()">📋 Dziennik</button>
+  </div>
+</header>
+
+<!-- SESSION BAR -->
+<div id="session-bar">
+  <span class="toolbar-label">Sesja lekcji:</span>
+  <div id="sessions-list"><span class="no-session">Brak aktywnej sesji</span></div>
+  <button class="btn btn-success" onclick="createSession()">＋ Nowa sesja</button>
+  <button class="btn btn-warn" onclick="openShareModal()" id="share-btn" style="display:none">📲 Pokaż kod uczniom</button>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <span class="toolbar-label">Odświeżanie:</span>
+  <select id="refresh-rate">
+    <option value="1000">1 sek</option>
+    <option value="2000" selected>2 sek</option>
+    <option value="5000">5 sek</option>
+    <option value="10000">10 sek</option>
+  </select>
+  <span class="toolbar-label" style="margin-left:12px">Wiadomość:</span>
+  <button class="btn btn-primary" onclick="toggleMsgPanel()">✉️ Wyślij do klasy</button>
+  <span class="select-info" id="select-info">0 wybranych</span>
+  <button class="btn btn-danger" style="margin-left:auto" onclick="logout()">Wyloguj</button>
+</div>
+
+<div class="main">
+  <!-- MSG PANEL -->
+  <div class="msg-panel" id="msg-panel">
+    <div class="msg-panel-title">📢 Wiadomość do uczniów</div>
+    <div class="msg-row">
+      <input class="msg-input" type="text" id="msg-input" placeholder="Wpisz wiadomość..." onkeydown="if(event.key==='Enter')sendMsg()">
+      <button class="btn btn-primary" onclick="sendMsg()">Wyślij</button>
+    </div>
+    <div class="quick-msgs">
+      <span class="toolbar-label">Szybkie:</span>
+      <button class="quick-btn" onclick="quickMsg('Proszę zamknąć wszystkie aplikacje')">Zamknij aplikacje</button>
+      <button class="quick-btn" onclick="quickMsg('Czas na test — proszę nie korzystać z internetu')">Czas na test</button>
+      <button class="quick-btn" onclick="quickMsg('Lekcja kończy się za 5 minut')">5 min do końca</button>
+      <button class="quick-btn" onclick="quickMsg('Proszę patrzeć na tablicę')">Patrz na tablicę</button>
+      <button class="quick-btn" onclick="quickMsg('Prześlij gotową pracę')">Prześlij pracę</button>
+    </div>
+  </div>
+
+  <div id="device-grid">
+    <div class="empty-state">
+      <span class="empty-icon">📡</span>
+      Utwórz sesję i podaj kod uczniom,<br>aby pojawili się tutaj
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN MODAL -->
+<div class="modal-bg" id="screen-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Podgląd ekranu</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-screen"><canvas class="modal-canvas" id="modal-canvas"></canvas></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="modal-lock-btn" onclick="modalLockToggle()">🔒 Zablokuj</button>
+      <button class="btn btn-primary" onclick="modalRefresh()">🔄 Odśwież</button>
+      <input type="text" id="modal-msg" placeholder="Wiadomość do ucznia..." style="flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none" onkeydown="if(event.key==='Enter')sendModalMsg()">
+      <button class="btn btn-primary" onclick="sendModalMsg()">Wyślij</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE/QR MODAL -->
+<div id="share-modal">
+  <div class="share-box">
+    <div style="font-size:36px;margin-bottom:12px">📲</div>
+    <div style="font-family:var(--mono);font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Kod dołączenia do lekcji</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:4px">Podaj uczniom ten kod i adres strony</div>
+    <div class="share-code-display" id="share-code-display">— — —</div>
+    <div class="share-url" id="share-url-display"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-success" onclick="copyCode()">📋 Kopiuj kod</button>
+      <button class="btn btn-primary" onclick="copyUrl()">🔗 Kopiuj link</button>
+      <button class="btn btn-danger" onclick="endCurrentSession()">🗑 Zakończ sesję</button>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="closeShareModal()">Zamknij</button>
+  </div>
+</div>
+
+<!-- LOG PANEL -->
+<div class="log-panel" id="log-panel">
+  <div class="log-header">📋 Dziennik <button class="log-close-btn" onclick="toggleLog()">✕</button></div>
+  <div class="log-entries" id="log-entries"></div>
+</div>
+
+<script>
+// ═══ STATE ═══════════════════════════════════════════════════════════
+let ws = null;
+let authToken = localStorage.getItem('monitor_token') || null;
+let serverUrl = localStorage.getItem('monitor_server') || 'ws://localhost:8765';
+let devices = {};         // id -> device
+let selectedDevices = new Set();
+let modalDeviceId = null;
+let refreshInterval = null;
+let activeSessions = [];  // [{code, createdAt}]
+let currentShareCode = null;
+
+// ═══ LOGIN ════════════════════════════════════════════════════════════
+function doLogin() {
+  const url = document.getElementById('server-url').value.trim();
+  const pwd = document.getElementById('login-password').value;
+  if (!pwd) return setLoginError('Wprowadź hasło.');
+  serverUrl = url;
+  localStorage.setItem('monitor_server', url);
+  connectWS(() => {
+    send({ type: 'teacher_login', password: pwd });
+  });
+}
+
+function connectWS(onOpen) {
+  if (ws) { try { ws.close(); } catch {} }
+  try {
+    ws = new WebSocket(serverUrl);
+    ws.onopen = () => { if (onOpen) onOpen(); };
+    ws.onclose = () => { setBadge(false); log('Rozłączono z serwerem', 'warn'); Object.keys(devices).forEach(id => { devices[id].online = false; }); renderGrid(); };
+    ws.onerror = () => { setBadge(false); setLoginError('Nie można połączyć z serwerem.'); };
+    ws.onmessage = onMessage;
+  } catch(e) { setLoginError('Błędny adres: ' + e.message); }
+}
+
+function onMessage(evt) {
+  let msg; try { msg = JSON.parse(evt.data); } catch { return; }
+
+  if (msg.type === 'auth_error') { setLoginError(msg.reason); return; }
+  if (msg.type === 'auth_required') { showLogin(); return; }
+
+  if (msg.type === 'teacher_ok') {
+    authToken = msg.token;
+    localStorage.setItem('monitor_token', authToken);
+    hideLogin();
+    setBadge(true);
+    log('Zalogowano pomyślnie', 'action');
+    // Load devices & sessions
+    if (msg.devices) { msg.devices.forEach(d => { devices[d.id] = { ...d, online: true, lastScreen: null }; }); renderGrid(); updateStats(); }
+    if (msg.sessions) { activeSessions = msg.sessions; renderSessions(); }
+    startRefresh();
+    return;
+  }
+
+  if (msg.type === 'device_joined') { devices[msg.id] = { id: msg.id, name: msg.name, student: msg.student, locked: false, online: true, lastScreen: null }; renderGrid(); updateStats(); log(`Dołączył: ${msg.student} (${msg.name})`, 'info'); return; }
+  if (msg.type === 'device_left') { if (devices[msg.id]) devices[msg.id].online = false; renderGrid(); updateStats(); log(`Rozłączył się: ${devices[msg.id]?.student || msg.id}`, 'warn'); return; }
+  if (msg.type === 'screen_data') { if (devices[msg.id]) { devices[msg.id].lastScreen = msg.data; updateCardScreen(msg.id, msg.data); if (modalDeviceId === msg.id) drawModalScreen(msg.data); } return; }
+  if (msg.type === 'lock_ack') { if (devices[msg.id]) { devices[msg.id].locked = msg.locked; updateCardLock(msg.id); updateStats(); log(`${devices[msg.id].student}: ${msg.locked ? 'zablokowany 🔒' : 'odblokowany 🔓'}`, msg.locked ? 'danger' : 'action'); } return; }
+  if (msg.type === 'session_created') { activeSessions.push({ code: msg.code, createdAt: msg.createdAt }); currentShareCode = msg.code; renderSessions(); openShareModal(msg.code); log(`Nowa sesja: ${msg.code}`, 'action'); return; }
+  if (msg.type === 'session_ended') { activeSessions = activeSessions.filter(s => s.code !== msg.code); if (currentShareCode === msg.code) currentShareCode = activeSessions[activeSessions.length-1]?.code || null; renderSessions(); log(`Sesja zakończona: ${msg.code}`, 'warn'); return; }
+}
+
+// ═══ AUTH UI ═══════════════════════════════════════════════════════════
+function showLogin() { document.getElementById('login-screen').style.display = 'flex'; authToken = null; localStorage.removeItem('monitor_token'); }
+function hideLogin() { document.getElementById('login-screen').style.display = 'none'; }
+function setLoginError(msg) { document.getElementById('login-error').textContent = msg; }
+function logout() { if (ws) ws.close(); authToken = null; localStorage.removeItem('monitor_token'); devices = {}; activeSessions = []; renderGrid(); renderSessions(); updateStats(); showLogin(); }
+
+// ═══ SESSIONS ══════════════════════════════════════════════════════════
+function createSession() { send({ type: 'create_session' }); }
+function endCurrentSession() { if (!currentShareCode) return; send({ type: 'end_session', code: currentShareCode }); closeShareModal(); }
+function renderSessions() {
+  const list = document.getElementById('sessions-list');
+  const shareBtn = document.getElementById('share-btn');
+  if (activeSessions.length === 0) { list.innerHTML = '<span class="no-session">Brak aktywnej sesji</span>'; shareBtn.style.display = 'none'; currentShareCode = null; return; }
+  list.innerHTML = activeSessions.map(s => `
+    <div class="session-chip">
+      <span>Kod:</span>
+      <span class="session-code">${s.code}</span>
+      <button class="copy-btn" onclick="copyText('${s.code}')" title="Kopiuj">📋</button>
+      <button class="copy-btn" onclick="send({type:'end_session',code:'${s.code}'})" title="Zakończ" style="color:var(--accent2)">✕</button>
+    </div>`).join('');
+  shareBtn.style.display = 'block';
+  if (!currentShareCode) currentShareCode = activeSessions[activeSessions.length-1].code;
+}
+
+function openShareModal(code) {
+  if (code) currentShareCode = code;
+  if (!currentShareCode) return;
+  const studentUrl = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://') + '/student';
+  document.getElementById('share-code-display').textContent = currentShareCode;
+  document.getElementById('share-url-display').textContent = studentUrl;
+  document.getElementById('share-modal').classList.add('open');
+}
+function closeShareModal() { document.getElementById('share-modal').classList.remove('open'); }
+function copyCode() { copyText(currentShareCode); showCopied('Kod skopiowany!'); }
+function copyUrl() { const u = serverUrl.replace('ws://', 'http://').replace('wss://', 'https://')+'/student'; copyText(u); showCopied('Link skopiowany!'); }
+function copyText(t) { navigator.clipboard?.writeText(t) || (document.execCommand && (() => { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); })()); }
+function showCopied(t) { const el = document.getElementById('share-code-display'); const orig = el.textContent; el.textContent = t; setTimeout(() => el.textContent = orig, 1500); }
+
+// ═══ COMMANDS ══════════════════════════════════════════════════════════
+function send(obj) { if (ws?.readyState === 1) ws.send(JSON.stringify(obj)); else log('Brak połączenia', 'warn'); }
+function lockDevice(id) { send({ type: 'lock', id, locked: true }); }
+function unlockDevice(id) { send({ type: 'lock', id, locked: false }); }
+function lockAll() { const t = selectedDevices.size > 0 ? [...selectedDevices] : Object.keys(devices).filter(id => devices[id].online); t.forEach(lockDevice); log(`Zablokowano ${t.length} urządzeń`, 'danger'); }
+function unlockAll() { const t = selectedDevices.size > 0 ? [...selectedDevices] : Object.keys(devices).filter(id => devices[id].online); t.forEach(unlockDevice); log(`Odblokowano ${t.length} urządzeń`, 'action'); }
+function sendMessage(id, text) { send({ type: 'message', id, text }); log(`Wiadomość do ${devices[id]?.student}: "${text}"`, 'action'); }
+function sendMsg() {
+  const text = document.getElementById('msg-input').value.trim(); if (!text) return;
+  const t = selectedDevices.size > 0 ? [...selectedDevices] : Object.keys(devices).filter(id => devices[id].online);
+  if (t.length === 0) send({ type: 'message', text }); else t.forEach(id => sendMessage(id, text));
+  document.getElementById('msg-input').value = '';
+}
+function quickMsg(text) { document.getElementById('msg-input').value = text; sendMsg(); }
+
+// ═══ RENDER ════════════════════════════════════════════════════════════
+function renderGrid() {
+  const grid = document.getElementById('device-grid');
+  const ids = Object.keys(devices);
+  if (ids.length === 0) { grid.innerHTML = '<div class="empty-state"><span class="empty-icon">📡</span>Utwórz sesję i podaj kod uczniom,<br>aby pojawili się tutaj</div>'; return; }
+  ids.forEach(id => {
+    if (document.getElementById('card-'+id)) { updateCardLock(id); return; }
+    const d = devices[id];
+    const card = document.createElement('div');
+    card.className = 'device-card' + (d.locked?' locked':'') + (selectedDevices.has(id)?' selected':'');
+    card.id = 'card-'+id;
+    card.innerHTML = `
+      <div class="screen-preview" id="preview-${id}">
+        <canvas class="screen-canvas" id="canvas-${id}"></canvas>
+        <div class="lock-overlay"><span class="lock-icon">🔒</span></div>
+      </div>
+      <div class="card-info">
+        <div>
+          <div class="device-name">${d.name}</div>
+          <div class="device-student">${d.student}</div>
+        </div>
+        <div class="status-dot ${d.online?(d.locked?'status-locked':'status-online'):'status-offline'}" id="dot-${id}"></div>
+      </div>
+      <div class="card-actions">
+        <button class="card-btn view" onclick="event.stopPropagation();viewScreen('${id}')">👁 Podgląd</button>
+        <button class="card-btn lock" id="lockbtn-${id}" onclick="event.stopPropagation();toggleLock('${id}')">${d.locked?'🔓 Odblokuj':'🔒 Zablokuj'}</button>
+        <button class="card-btn msg" onclick="event.stopPropagation();promptMsg('${id}')">✉ Msg</button>
+      </div>`;
+    card.addEventListener('click', () => toggleSelect(id, card));
+    grid.appendChild(card);
+  });
+}
+function updateCardLock(id) {
+  const card = document.getElementById('card-'+id); if (!card) return;
+  const d = devices[id];
+  card.classList.toggle('locked', d.locked);
+  const dot = document.getElementById('dot-'+id); if (dot) dot.className = 'status-dot '+(d.online?(d.locked?'status-locked':'status-online'):'status-offline');
+  const btn = document.getElementById('lockbtn-'+id); if (btn) btn.textContent = d.locked?'🔓 Odblokuj':'🔒 Zablokuj';
+}
+function updateCardScreen(id, dataUrl) {
+  const canvas = document.getElementById('canvas-'+id); if (!canvas) return;
+  const img = new Image();
+  img.onload = () => { canvas.width = canvas.offsetWidth||210; canvas.height = canvas.offsetHeight||130; canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); };
+  img.src = dataUrl;
+}
+function drawModalScreen(dataUrl) {
+  const canvas = document.getElementById('modal-canvas');
+  const img = new Image(); img.onload = () => { canvas.width=img.width; canvas.height=img.height; canvas.getContext('2d').drawImage(img,0,0); }; img.src = dataUrl;
+}
+function updateStats() {
+  const ids = Object.keys(devices);
+  document.getElementById('stat-total').textContent = ids.length;
+  document.getElementById('stat-online').textContent = ids.filter(id=>devices[id].online).length;
+  document.getElementById('stat-locked').textContent = ids.filter(id=>devices[id].locked).length;
+}
+
+// ═══ MODAL ═════════════════════════════════════════════════════════════
+function viewScreen(id) {
+  modalDeviceId = id; const d = devices[id];
+  document.getElementById('modal-title').textContent = `Podgląd: ${d.name} — ${d.student}`;
+  document.getElementById('modal-lock-btn').textContent = d.locked?'🔓 Odblokuj':'🔒 Zablokuj';
+  document.getElementById('screen-modal').classList.add('open');
+  if (d.lastScreen) drawModalScreen(d.lastScreen); else send({ type:'get_screen', id });
+}
+function closeModal() { document.getElementById('screen-modal').classList.remove('open'); modalDeviceId = null; }
+function modalLockToggle() { if (!modalDeviceId) return; const d = devices[modalDeviceId]; d.locked ? unlockDevice(modalDeviceId) : lockDevice(modalDeviceId); }
+function modalRefresh() { if (modalDeviceId) send({ type:'get_screen', id:modalDeviceId }); }
+function sendModalMsg() { const t = document.getElementById('modal-msg').value.trim(); if (!t||!modalDeviceId) return; sendMessage(modalDeviceId, t); document.getElementById('modal-msg').value = ''; }
+
+// ═══ SELECT ════════════════════════════════════════════════════════════
+function toggleSelect(id, card) {
+  selectedDevices.has(id) ? selectedDevices.delete(id) : selectedDevices.add(id);
+  card.classList.toggle('selected', selectedDevices.has(id));
+  const info = document.getElementById('select-info');
+  if (selectedDevices.size > 0) { info.classList.add('visible'); info.textContent = `${selectedDevices.size} wybranych`; }
+  else info.classList.remove('visible');
+}
+function toggleLock(id) { const d = devices[id]; d.locked ? unlockDevice(id) : lockDevice(id); }
+function promptMsg(id) { const t = prompt(`Wiadomość do ${devices[id]?.student}:`); if (t) sendMessage(id, t); }
+
+// ═══ MISC ══════════════════════════════════════════════════════════════
+function toggleLog() { document.getElementById('log-panel').classList.toggle('open'); }
+function toggleMsgPanel() { document.getElementById('msg-panel').classList.toggle('open'); }
+function setBadge(c) { const b = document.getElementById('conn-badge'); b.className='conn-badge '+(c?'connected':'disconnected'); b.textContent=c?'⬤ Połączony':'⬤ Rozłączony'; }
+function log(text, type='info') {
+  const entries = document.getElementById('log-entries');
+  const div = document.createElement('div'); div.className='log-entry '+type;
+  div.innerHTML = `<div class="log-time">${new Date().toLocaleTimeString('pl-PL')}</div>${text}`;
+  entries.prepend(div); if (entries.children.length > 150) entries.lastChild.remove();
+}
+function startRefresh() {
+  if (refreshInterval) clearInterval(refreshInterval);
+  const rate = parseInt(document.getElementById('refresh-rate').value)||2000;
+  refreshInterval = setInterval(() => { if (ws?.readyState!==1) return; Object.keys(devices).filter(id=>devices[id].online).forEach(id=>send({type:'get_screen',id})); }, rate);
+}
+document.getElementById('refresh-rate').addEventListener('change', startRefresh);
+
+// Auto-reconnect with saved token
+window.addEventListener('load', () => {
+  document.getElementById('server-url').value = serverUrl;
+  if (authToken) {
+    connectWS(() => send({ type: 'teacher_hello', token: authToken }));
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "monitor-klasy",
+  "version": "2.0.0",
+  "description": "System monitorowania tabletów uczniów — wersja z zabezpieczeniami",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}

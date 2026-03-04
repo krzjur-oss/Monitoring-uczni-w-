@@ -78,7 +78,7 @@ h1{font-size:18px;margin-bottom:6px;color:#00d4ff;font-family:monospace;letter-s
   </div>
   <div class="field">
     <label>Kod sesji (podany przez nauczyciela)</label>
-    <input type="text" id="session-code" placeholder="ABC-DEF" class="code-input" maxlength="7" oninput="this.value=this.value.toUpperCase()">
+    <input type="text" id="session-code" placeholder="ABC-DEF" class="code-input" maxlength="7" oninput="formatCode(this)">
   </div>
 
   <div class="adv-toggle" onclick="toggleAdv()">▸ Ustawienia zaawansowane</div>
@@ -149,6 +149,19 @@ function toggleAdv() {
   document.querySelector('.adv-toggle').textContent = s.classList.contains('open') ? '▾ Ustawienia zaawansowane' : '▸ Ustawienia zaawansowane';
 }
 
+function formatCode(el) {
+  // Strip everything except allowed chars, uppercase
+  let val = el.value.toUpperCase().replace(/[^ABCDEFGHJKLMNPQRSTUVWXYZ23456789-]/g, '');
+  // Auto-insert dash after 3 chars
+  if (val.length >= 3 && val[3] !== '-') {
+    val = val.slice(0, 3) + '-' + val.slice(3);
+  }
+  // Remove double dashes
+  val = val.replace(/--+/g, '-');
+  // Max 7 chars (XXX-XXX)
+  el.value = val.slice(0, 7);
+}
+
 function joinSession() {
   studentName = document.getElementById('student-name').value.trim();
   const code = document.getElementById('session-code').value.trim().toUpperCase();
@@ -156,7 +169,7 @@ function joinSession() {
   const addr = document.getElementById('server-addr').value.trim() || 'ws://localhost:8765';
 
   if (!studentName) return setErr('Wpisz imię i nazwisko.');
-  if (code.length < 6) return setErr('Wpisz poprawny kod sesji (np. ABC-DEF).');
+  if (code.length !== 7 || code[3] !== '-') return setErr('Wpisz poprawny kod sesji (format: ABC-DEF).');
 
   setErr('Łączenie...');
   ws = new WebSocket(addr);

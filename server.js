@@ -46,7 +46,7 @@ function token() { return crypto.randomBytes(32).toString('hex'); }
 function sessionCode() {
   const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s = '';
-  for (let i = 0; i < 7; i++) { if (i === 3) s += '-'; s += c[crypto.randomInt(c.length)]; }
+  for (let i = 0; i < 6; i++) { if (i === 3) s += '-'; s += c[crypto.randomInt(c.length)]; }
   return s;
 }
 function isLocked(ip) {

@@ -180,6 +180,7 @@ function joinSession() {
   const code = document.getElementById('session-code').value.trim().toUpperCase();
   deviceName = document.getElementById('device-name').value.trim() || 'Tablet-' + Math.floor(Math.random()*900+100);
   const addr = document.getElementById('server-addr').value.trim() || 'ws://localhost:8765';
+  localStorage.setItem('student_server', addr);
 
   if (!studentName) return setErr('Wpisz imię i nazwisko.');
   if (code.length !== 7 || code[3] !== '-') return setErr('Wpisz poprawny kod sesji (format: ABC-DEF).');
@@ -383,9 +384,14 @@ setInterval(() => {
   document.getElementById('info-time').textContent = getElapsed();
 }, 1000);
 
-// Pre-fill server from URL params
+// Pre-fill server — najpierw URL params, potem localStorage
 const params = new URLSearchParams(location.search);
-if (params.get('server')) document.getElementById('server-addr').value = params.get('server');
+if (params.get('server')) {
+  document.getElementById('server-addr').value = params.get('server');
+} else {
+  const saved = localStorage.getItem('student_server');
+  if (saved) document.getElementById('server-addr').value = saved;
+}
 if (params.get('code')) { document.getElementById('session-code').value = params.get('code').toUpperCase(); }
 </script>
 </body>

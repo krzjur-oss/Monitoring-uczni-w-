@@ -306,7 +306,7 @@ function onMessage(evt) {
   let msg; try { msg = JSON.parse(evt.data); } catch { return; }
 
   if (msg.type === 'auth_error') { setLoginError(msg.reason); return; }
-  if (msg.type === 'auth_required') { showLogin(); return; }
+  if (msg.type === 'auth_required') { showLogin('Sesja wygasła — zaloguj się ponownie.'); return; }
 
   if (msg.type === 'teacher_ok') {
     authToken = msg.token;
@@ -330,7 +330,12 @@ function onMessage(evt) {
 }
 
 // ═══ AUTH UI ═══════════════════════════════════════════════════════════
-function showLogin() { document.getElementById('login-screen').style.display = 'flex'; authToken = null; localStorage.removeItem('monitor_token'); }
+function showLogin(msg) {
+  document.getElementById('login-screen').style.display = 'flex';
+  authToken = null;
+  localStorage.removeItem('monitor_token');
+  if (msg) setLoginError(msg);
+}
 function hideLogin() { document.getElementById('login-screen').style.display = 'none'; }
 function setLoginError(msg) { document.getElementById('login-error').textContent = msg; }
 function logout() { if (ws) ws.close(); authToken = null; localStorage.removeItem('monitor_token'); devices = {}; activeSessions = []; renderGrid(); renderSessions(); updateStats(); showLogin(); }
@@ -483,6 +488,11 @@ document.getElementById('refresh-rate').addEventListener('change', startRefresh)
 window.addEventListener('load', () => {
   document.getElementById('server-url').value = serverUrl;
   if (authToken) {
+    // Ukryj ekran logowania od razu i pokaż stan "łączenie"
+    hideLogin();
+    const badge = document.getElementById('conn-badge');
+    badge.className = 'conn-badge disconnected';
+    badge.textContent = '⬤ Łączenie...';
     connectWS(() => send({ type: 'teacher_hello', token: authToken }));
   }
 });

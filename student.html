@@ -115,6 +115,18 @@ h1{font-size:18px;margin-bottom:6px;color:#00d4ff;font-family:monospace;letter-s
       <div class="info-card"><div class="info-val" id="info-msgs">0</div><div class="info-label">Wiadomości</div></div>
       <div class="info-card"><div class="info-val" id="info-status">🟢</div><div class="info-label">Status</div></div>
     </div>
+    <!-- Zgoda na udostępnienie ekranu -->
+    <div id="screen-permission-box" style="background:#0f172a;border:1px solid #1e2d42;border-radius:8px;padding:16px;margin-bottom:14px;text-align:center">
+      <div style="font-size:13px;color:#94a3b8;margin-bottom:10px">
+        📺 Nauczyciel może zobaczyć Twój ekran.<br>
+        <span style="font-size:11px;color:#64748b">Kliknij przycisk i wybierz ekran/okno do udostępnienia.</span>
+      </div>
+      <button onclick="requestScreenCapture()" id="share-screen-btn"
+        style="padding:10px 22px;background:#00d4ff;color:#000;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:monospace">
+        📺 Udostępnij ekran nauczycielowi
+      </button>
+      <div id="screen-status" style="margin-top:8px;font-size:11px;color:#64748b"></div>
+    </div>
     <div id="msg-list"></div>
   </div>
 </div>
@@ -142,6 +154,7 @@ h1{font-size:18px;margin-bottom:6px;color:#00d4ff;font-family:monospace;letter-s
 <script>
 let ws=null, deviceId=null, startTime=Date.now(), msgCount=0, captureInterval=null;
 let studentName='', deviceName='';
+let screenStream=null, videoTrack=null, screenActive=false;
 
 function toggleAdv() {
   const s = document.getElementById('adv-section');
@@ -189,6 +202,7 @@ function onMessage(evt) {
     document.getElementById('setup').style.display = 'none';
     document.getElementById('main').style.display = 'block';
     document.getElementById('student-label').textContent = studentName + ' · ' + deviceName;
+    // Start fallback capture interval — zastąpione prawdziwym ekranem po kliknięciu
     captureInterval = setInterval(captureAndSend, 2000);
     return;
   }
@@ -230,62 +244,131 @@ function addMsg(text) {
   if (list.children.length > 30) list.lastChild.remove();
 }
 
-async function captureAndSend() {
-  if (!ws || ws.readyState !== 1 || !deviceId) return;
-  const canvas = document.getElementById('offscreen-canvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = 640; canvas.height = 400;
+// ── SCREEN CAPTURE API ─────────────────────────────────────────────────────
+async function requestScreenCapture() {
+  const btn = document.getElementById('share-screen-btn');
+  const status = document.getElementById('screen-status');
 
-  // Gradient background
-  const grd = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  grd.addColorStop(0, '#0a0e1a'); grd.addColorStop(1, '#0f172a');
-  ctx.fillStyle = grd; ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Grid
-  ctx.strokeStyle = 'rgba(0,212,255,0.04)'; ctx.lineWidth = 1;
-  for (let x = 0; x < canvas.width; x += 32) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
-  for (let y = 0; y < canvas.height; y += 32) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
-
-  // Topbar
-  ctx.fillStyle = '#111827'; ctx.fillRect(10, 10, canvas.width-20, 38);
-  ctx.fillStyle = '#00ff9d'; ctx.beginPath(); ctx.arc(24, 29, 5, 0, Math.PI*2); ctx.fill();
-  ctx.font = '12px monospace'; ctx.fillStyle = '#e2e8f0';
-  ctx.fillText(`${studentName}  ·  ${deviceName}`, 36, 33);
-  ctx.fillStyle = '#00d4ff'; ctx.textAlign = 'right';
-  ctx.fillText(new Date().toLocaleTimeString('pl-PL'), canvas.width-18, 33);
-  ctx.textAlign = 'left';
-
-  // Info cards
-  const cards = [['Czas', getElapsed()], ['Wiadomości', String(msgCount)], ['Status', 'Aktywny']];
-  cards.forEach(([label, val], i) => {
-    const x = 12 + i * 206, y = 58;
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(x, y, 196, 64);
-    ctx.fillStyle = '#00ff9d'; ctx.font = 'bold 18px monospace'; ctx.fillText(val, x+12, y+34);
-    ctx.fillStyle = '#64748b'; ctx.font = '10px monospace'; ctx.fillText(label.toUpperCase(), x+12, y+54);
-  });
-
-  // Messages
-  ctx.font = '12px sans-serif';
-  let yy = 136;
-  const items = document.querySelectorAll('.msg-item');
-  items.forEach((m, i) => {
-    if (i > 6 || yy > canvas.height-20) return;
-    ctx.fillStyle = '#1a2235'; ctx.fillRect(12, yy, canvas.width-24, 28);
-    ctx.strokeStyle = '#00d4ff'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(12,yy); ctx.lineTo(12,yy+28); ctx.stroke();
-    ctx.fillStyle = '#94a3b8'; ctx.fillText(m.textContent.trim().substring(0,80), 22, yy+18);
-    yy += 32;
-  });
-
-  // Placeholder text if no messages
-  if (items.length === 0) {
-    ctx.fillStyle = '#1e2d42'; ctx.fillRect(12, 136, canvas.width-24, 60);
-    ctx.fillStyle = '#334155'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Brak wiadomości od nauczyciela', canvas.width/2, 170);
-    ctx.textAlign = 'left';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    status.textContent = '⚠️ Twoja przeglądarka nie obsługuje udostępniania ekranu. Użyj Chrome lub Firefox.';
+    status.style.color = '#ff4d6d';
+    return;
   }
 
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+  try {
+    btn.textContent = '⏳ Czekam na zgodę...';
+    btn.disabled = true;
+
+    screenStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 1, width: { ideal: 1280 }, height: { ideal: 800 } },
+      audio: false
+    });
+
+    videoTrack = screenStream.getVideoTracks()[0];
+    screenActive = true;
+
+    // Jeśli uczeń zatrzyma udostępnianie
+    videoTrack.addEventListener('ended', () => {
+      screenActive = false;
+      screenStream = null;
+      videoTrack = null;
+      btn.textContent = '📺 Udostępnij ekran nauczycielowi';
+      btn.disabled = false;
+      status.textContent = '⚠️ Udostępnianie zatrzymane. Kliknij ponownie aby wznowić.';
+      status.style.color = '#ff4d6d';
+    });
+
+    btn.textContent = '✅ Ekran udostępniony';
+    btn.style.background = '#00ff9d';
+    status.textContent = 'Nauczyciel widzi Twój ekran.';
+    status.style.color = '#00ff9d';
+
+    // Natychmiast wyślij pierwszy kadr
+    captureRealScreen();
+
+  } catch (err) {
+    screenActive = false;
+    btn.textContent = '📺 Udostępnij ekran nauczycielowi';
+    btn.disabled = false;
+    if (err.name === 'NotAllowedError') {
+      status.textContent = '❌ Odmówiono zgody. Kliknij ponownie i wybierz ekran.';
+    } else {
+      status.textContent = '❌ Błąd: ' + err.message;
+    }
+    status.style.color = '#ff4d6d';
+  }
+}
+
+// Przechwytuje prawdziwy ekran przez ImageCapture API
+async function captureRealScreen() {
+  if (!screenActive || !videoTrack) return;
+  try {
+    const imageCapture = new ImageCapture(videoTrack);
+    const bitmap = await imageCapture.grabFrame();
+    const canvas = document.getElementById('offscreen-canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    bitmap.close();
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+    if (ws && ws.readyState === 1 && deviceId) {
+      ws.send(JSON.stringify({ type:'screen_data', id:deviceId, data:dataUrl }));
+    }
+  } catch (e) {
+    // ImageCapture może nie być dostępne — fallback do video element
+    captureViaVideo();
+  }
+}
+
+// Fallback przez element <video> (Firefox)
+async function captureViaVideo() {
+  if (!screenActive || !screenStream) return;
+  try {
+    const video = document.createElement('video');
+    video.srcObject = screenStream;
+    video.muted = true;
+    await video.play();
+    const canvas = document.getElementById('offscreen-canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 800;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    video.pause();
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+    if (ws && ws.readyState === 1 && deviceId) {
+      ws.send(JSON.stringify({ type:'screen_data', id:deviceId, data:dataUrl }));
+    }
+  } catch (e) {
+    console.warn('Capture fallback error:', e);
+  }
+}
+
+async function captureAndSend() {
+  if (!ws || ws.readyState !== 1 || !deviceId) return;
+  // Jeśli ekran jest udostępniony — wyślij prawdziwy kadr
+  if (screenActive && videoTrack) {
+    await captureRealScreen();
+    return;
+  }
+  // Fallback — panel ucznia (bez prawdziwego ekranu)
+  const canvas = document.getElementById('offscreen-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 640; canvas.height = 200;
+  ctx.fillStyle = '#0a0e1a'; ctx.fillRect(0,0,640,200);
+  ctx.fillStyle = '#111827'; ctx.fillRect(10,10,620,50);
+  ctx.fillStyle = '#00ff9d'; ctx.beginPath(); ctx.arc(26,35,5,0,Math.PI*2); ctx.fill();
+  ctx.font = '12px monospace'; ctx.fillStyle = '#e2e8f0';
+  ctx.fillText(studentName + '  ·  ' + deviceName, 40, 39);
+  ctx.fillStyle = '#00d4ff'; ctx.textAlign='right';
+  ctx.fillText(new Date().toLocaleTimeString('pl-PL'), 622, 39);
+  ctx.textAlign = 'left';
+  // Komunikat o braku zgody
+  ctx.fillStyle = '#1e2d42'; ctx.fillRect(10,70,620,80);
+  ctx.font = '14px sans-serif'; ctx.fillStyle = '#94a3b8'; ctx.textAlign='center';
+  ctx.fillText('Uczeń nie udostępnił ekranu', 320, 105);
+  ctx.font = '11px sans-serif'; ctx.fillStyle = '#475569';
+  ctx.fillText('Oczekiwanie na kliknięcie "Udostępnij ekran"', 320, 128);
+  ctx.textAlign='left';
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
   ws.send(JSON.stringify({ type:'screen_data', id:deviceId, data:dataUrl }));
 }
 
